@@ -23,13 +23,7 @@ class SudokuSolver(NumberPuzzleSolver):
 
     def _get_peers(self, row: int, col: int) -> List[Tuple[int, int]]:
         """返回 (row,col) 在同一行、列和宫内的其他格子（不包含自身）。"""
-        peers = set()
-        for c in range(self.n):
-            if c != col:
-                peers.add((row, c))
-        for r in range(self.n):
-            if r != row:
-                peers.add((r, col))
+        peers = set(super()._get_peers(row, col))
 
         box_r = row // self.block_rows * self.block_rows
         box_c = col // self.block_cols * self.block_cols

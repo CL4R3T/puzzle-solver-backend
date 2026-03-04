@@ -1,4 +1,4 @@
-from app.services.sudoku_solver import SudokuSolver, solve_sudoku, validate_board
+from app.services.sudoku_solver import SudokuSolver
 
 
 def test_solve_standard():
@@ -14,10 +14,11 @@ def test_solve_standard():
         [0, 0, 0, 4, 1, 9, 0, 0, 5],
         [0, 0, 0, 0, 8, 0, 0, 7, 9],
     ]
-    solution = solve_sudoku(board)
+    solver = SudokuSolver(board)
+    solution = solver.solve()
     assert solution is not None
     # 核心验证行、列、宫都不重复
-    assert validate_board(solution).valid
+    assert SudokuSolver.validate_board(solution).valid
     # 一些固定位置被填充
     assert solution[0][2] == 4
     assert solution[8][8] == 9
@@ -37,12 +38,12 @@ def test_solve_custom_block():
     solver = SudokuSolver(board, block_shape=(2, 3))
     sol = solver.solve()
     assert sol is not None
-    assert validate_board(sol, block_shape=(2, 3)).valid
+    assert SudokuSolver.validate_board(sol, block_shape=(2, 3)).valid
 
 
 def test_validate_rejects_bad():
     bad = [[1, 1], [0, 0]]
-    res = validate_board(bad, block_shape=(1, 2))
+    res = SudokuSolver.validate_board(bad, block_shape=(1, 2))
     assert not res.valid
 
 

@@ -153,7 +153,7 @@ class NumberPuzzleSolver:
         for val in list(self._mask_to_values(self.pos[row][col])):
             board_cpy = copy.deepcopy(self.board)
             pos_cpy = copy.deepcopy(self.pos)
-            solver = NumberPuzzleSolver(board_cpy)
+            solver = type(self)(board_cpy)
             solver.pos = pos_cpy
             if solver._assign(row, col, val):
                 if solver._solve_with_cp():
