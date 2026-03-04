@@ -1,4 +1,4 @@
-from app.services.sudoku_solver import solve_sudoku, validate_board
+from app.services.sudoku_solver import SudokuSolver
 
 board = [
     [0, 0, 7, 0, 0, 3, 5, 0, 0],
@@ -12,14 +12,10 @@ board = [
     [9, 6, 0, 7, 0, 5, 0, 2, 0],
 ]
 
-if validate_board(board).valid:
-    print("Board is valid")
-    result = solve_sudoku(board)
-    if result:
-        print("Solved successfully")
-        print(result)
-    else:
-        print("Failed to solve")
+solver = SudokuSolver(board, block_shape=(3, 3))
+solution = solver.solve()
+if solution:
+    for row in solution:
+        print(row)
 else:
-    print("Board is invalid")
-    print(validate_board(board).message)
+    print("无解")

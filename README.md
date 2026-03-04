@@ -2,23 +2,6 @@
 
 基于 FastAPI 的数独求解 API 服务。
 
-## 项目结构
-
-```
-backend/
-├── app/
-│   ├── main.py              # FastAPI 入口
-│   ├── api/
-│   │   └── routes/
-│   │       └── sudoku.py    # 数独相关 API
-│   ├── models/
-│   │   └── sudoku.py        # 请求/响应数据模型
-│   └── services/
-│       └── sudoku_solver.py # 求解逻辑（待实现）
-├── requirements.txt
-└── README.md
-```
-
 ## 数据类型约定
 
 ### 数独棋盘 `board`

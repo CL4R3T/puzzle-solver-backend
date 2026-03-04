@@ -4,14 +4,14 @@
 
 from fastapi import APIRouter, HTTPException
 
-from app.models import SolveRequest, SolveResponse, ValidationResult
-from app.services.sudoku_solver import solve_sudoku, validate_board
+from app.models import SolveSudokuRequest, SolveSudokuResponse, ValidationResult
+from app.services import SudokuSolver
 
 router = APIRouter(prefix="/sudoku", tags=["数独"])
 
 
-@router.post("/solve", response_model=SolveResponse)
-async def solve(request: SolveRequest) -> SolveResponse:
+@router.post("/solve", response_model=SolveSudokuResponse)
+async def sudoku_solve(request: SolveSudokuRequest) -> SolveSudokuResponse:
     """
     求解数独
 
@@ -19,8 +19,8 @@ async def solve(request: SolveRequest) -> SolveResponse:
     - 返回求解结果或错误信息
     """
     try:
-        solution = solve_sudoku(request.board)
-        return SolveResponse(
+        solution = SudokuSolver(request.board, request.block_shape).solve()
+        return SolveSudokuResponse(
             success=solution is not None,
             solution=solution,
             message="求解成功" if solution else "无解",
@@ -32,11 +32,11 @@ async def solve(request: SolveRequest) -> SolveResponse:
 
 
 @router.post("/validate", response_model=ValidationResult)
-async def validate(request: SolveRequest) -> ValidationResult:
+async def sudoku_validate(request: SolveSudokuRequest) -> ValidationResult:
     """
     校验数独棋盘是否合法
 
     - 检查行、列、九宫格内是否有重复
     - 空格（0）不参与重复检查
     """
-    return validate_board(request.board)
+    return SudokuSolver.validate_board(request.board, request.block_shape)
