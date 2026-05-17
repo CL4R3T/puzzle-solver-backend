@@ -1,20 +1,25 @@
 
 import copy
 from typing import List, Tuple, Optional
-from app.models import ValidationResult
 
-class NumberPuzzleSolver:
-    """通用填数谜题求解器（无宫格概念，任意边长 n）。
+from app.models import ValidationResult
+from app.constraints import Constraint, RowConstraint, ColumnConstraint
+
+
+class PuzzleSolver:
+    """通用填数谜题求解器。通过组合约束（而非继承）支持任意变体。
 
     使用 n 位的 int 作为每个格子的可能性掩码：最低位表示数字 1，
     次位表示数字 2，依此类推。已填的格子其掩码为单一位。
     """
 
-    def __init__(self, board: List[List[int]]):
+    def __init__(self, board: List[List[int]], constraints: List[Constraint]):
         self.board: List[List[int]] = copy.deepcopy(board)
         self.n = len(self.board)
         if any(len(row) != self.n for row in self.board):
             raise ValueError("棋盘必须为正方形")
+
+        self.constraints = constraints
 
         # 全可能位掩码，例如 n=4 时为 0b1111
         self.all_mask: int = (1 << self.n) - 1
@@ -31,6 +36,21 @@ class NumberPuzzleSolver:
                 else:
                     self.pos[r][c] = self.all_mask
 
+        # 预计算 peer map：合并所有约束的 peer（去重）
+        self._peer_map: dict[tuple[int, int], list[tuple[int, int]]] = {}
+        for r in range(self.n):
+            for c in range(self.n):
+                peers = set()
+                for constraint in self.constraints:
+                    for pr, pc in constraint.get_peers(r, c):
+                        peers.add((pr, pc))
+                self._peer_map[(r, c)] = list(peers)
+
+        # 收集所有约束的 unit
+        self._all_units: list[list[tuple[int, int]]] = []
+        for constraint in self.constraints:
+            self._all_units.extend(constraint.get_units())
+
     # ---------- 辅助位运算 ----------
     def _mask_to_values(self, mask: int):
         """按从小到大的顺序生成 mask 中的所有数字值（1-based）。"""
@@ -46,15 +66,7 @@ class NumberPuzzleSolver:
 
     # ---------- 约束传播基础操作 ----------
     def _get_peers(self, row: int, col: int) -> List[Tuple[int, int]]:
-        """返回 (row,col) 在同一行和列的其他格子（不包含自身）。"""
-        peers: List[Tuple[int, int]] = []
-        for c in range(self.n):
-            if c != col:
-                peers.append((row, c))
-        for r in range(self.n):
-            if r != row:
-                peers.append((r, col))
-        return peers
+        return self._peer_map[(row, col)]
 
     def _eliminate(self, row: int, col: int, val: int) -> bool:
         """从 (row,col) 的可能性中移除 val。若变为单一可能则递归传播。
@@ -91,7 +103,7 @@ class NumberPuzzleSolver:
         return True
 
     def _find_hidden_single(self, unit: List[Tuple[int, int]]) -> Optional[Tuple[int, int, int]]:
-        """在给定范围 unit （行或列）中查找隐藏的唯一值。返回 (r,c,val) 或 None。"""
+        """在给定 unit 中查找隐藏的唯一值。返回 (r,c,val) 或 None。"""
         for val in range(1, self.n + 1):
             cells = [(r, c) for r, c in unit if (self.pos[r][c] & (1 << (val - 1))) != 0]
             if len(cells) == 1:
@@ -101,7 +113,7 @@ class NumberPuzzleSolver:
         return None
 
     def _propagate(self) -> bool:
-        """执行裸单 + hidden single 直到不再变化。返回是否成功。"""
+        """对所有约束的 unit 执行裸单 + hidden single 循环，与约束类型无关。"""
         changed = True
         while changed:
             changed = False
@@ -114,17 +126,16 @@ class NumberPuzzleSolver:
                             return False
                         changed = True
 
-            # hidden singles：行与列
-            for i in range(self.n):
-                row_unit = [(i, c) for c in range(self.n) if self.board[i][c] == 0]
-                col_unit = [(r, i) for r in range(self.n) if self.board[r][i] == 0]
-                for unit in (row_unit, col_unit):
-                    h = self._find_hidden_single(unit)
-                    if h:
-                        r, c, val = h
-                        if not self._assign(r, c, val):
-                            return False
-                        changed = True
+            # hidden singles：遍历所有约束的所有 unit
+            for unit in self._all_units:
+                # 只考虑 unit 中尚未填充的格子
+                active_unit = [(r, c) for r, c in unit if self.board[r][c] == 0]
+                h = self._find_hidden_single(active_unit)
+                if h:
+                    r, c, val = h
+                    if not self._assign(r, c, val):
+                        return False
+                    changed = True
 
         return True
 
@@ -149,11 +160,10 @@ class NumberPuzzleSolver:
             return True
 
         row, col = cell
-        # 备份当前状态
         for val in list(self._mask_to_values(self.pos[row][col])):
             board_cpy = copy.deepcopy(self.board)
             pos_cpy = copy.deepcopy(self.pos)
-            solver = type(self)(board_cpy)
+            solver = PuzzleSolver(board_cpy, self.constraints)
             solver.pos = pos_cpy
             if solver._assign(row, col, val):
                 if solver._solve_with_cp():
@@ -165,7 +175,6 @@ class NumberPuzzleSolver:
 
     def solve(self) -> Optional[List[List[int]]]:
         """尝试求解，失败返回 None，成功返回解盘（新的二维列表）。"""
-        # 在开始前把已知格子的约束传播一次
         for r in range(self.n):
             for c in range(self.n):
                 if self.board[r][c] != 0:
@@ -176,23 +185,17 @@ class NumberPuzzleSolver:
             return self.board
         return None
 
-    def validate_board(board: list[list[int]]) -> ValidationResult:
-        """确保棋盘为正方形"""
-        n = len(board)
-        for row in board:
-            if len(row) != n:
-                return ValidationResult(valid=False, message="棋盘不是正方形")
-            for cell in row:
-                if not 0 <= cell <= n:
-                    return ValidationResult(valid=False, message=f"格子值必须在0-{n}之间")
-        for row in range(n):
-            for col in range(n):
-                if board[row][col] != 0:
-                    for r in range(row+1,n):
-                        if board[r][col] == board[row][col]:
-                            return ValidationResult(valid=False, message="格子值重复")
-                    for c in range(col+1,n):
-                        if board[row][c] == board[row][col]:
-                            return ValidationResult(valid=False, message="格子值重复")
+    def validate_board(self) -> ValidationResult:
+        """委托各约束校验棋盘合法性。"""
+        for constraint in self.constraints:
+            result = constraint.validate(self.board)
+            if not result.valid:
+                return result
         return ValidationResult(valid=True, message="棋盘合法")
 
+
+# 向后兼容别名
+def NumberPuzzleSolver(board: List[List[int]]) -> PuzzleSolver:
+    """向后兼容：构造仅行列约束的 PuzzleSolver（拉丁方）。"""
+    n = len(board)
+    return PuzzleSolver(board, [RowConstraint(n), ColumnConstraint(n)])
