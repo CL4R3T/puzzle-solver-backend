@@ -24,15 +24,5 @@ class SudokuSolver(PuzzleSolver):
         super().__init__(board, constraints)
         self.block_rows, self.block_cols = block_shape
 
-    @staticmethod
-    def validate_board(board: List[List[int]], block_shape: Tuple[int, int] = (3, 3)) -> ValidationResult:
-        n = len(board)
-        for constraint in [
-            RowConstraint(n),
-            ColumnConstraint(n),
-            BoxConstraint(n, block_shape),
-        ]:
-            result = constraint.validate(board)
-            if not result.valid:
-                return result
-        return ValidationResult(valid=True, message="棋盘合法")
+    def validate_board(self) -> ValidationResult:
+        return super().validate_board()

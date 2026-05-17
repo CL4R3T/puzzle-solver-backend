@@ -1,5 +1,5 @@
 """
-数独相关 API 路由
+数独相关 API 路由（保留向后兼容，新代码请使用 /api/puzzle/sudoku/...）
 """
 
 from fastapi import APIRouter, HTTPException
@@ -39,4 +39,5 @@ async def sudoku_validate(request: SolveSudokuRequest) -> ValidationResult:
     - 检查行、列、九宫格内是否有重复
     - 空格（0）不参与重复检查
     """
-    return SudokuSolver.validate_board(request.board, request.block_shape)
+    solver = SudokuSolver(request.board, request.block_shape)
+    return solver.validate_board()

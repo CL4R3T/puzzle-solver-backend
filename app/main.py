@@ -5,12 +5,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import sudoku
+import app.puzzles  # noqa: F401 — 触发 PuzzleRegistry 注册
+from app.api.routes import sudoku, puzzle
 
 app = FastAPI(
-    title="数独求解 API",
-    description="提供数独求解、校验等接口",
-    version="0.1.0",
+    title="谜题求解 API",
+    description="提供数独等谜题的求解、校验接口",
+    version="0.2.0",
 )
 
 # CORS：方便前端跨域调用
@@ -23,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(sudoku.router, prefix="/api")
+app.include_router(puzzle.router, prefix="/api")
 
 
 @app.get("/")
