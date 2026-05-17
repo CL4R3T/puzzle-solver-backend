@@ -157,3 +157,6 @@ logs/
 *.bak
 *.backup
 demo.py
+
+# Claude Code
+.claude/
