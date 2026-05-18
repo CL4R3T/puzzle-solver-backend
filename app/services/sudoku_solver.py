@@ -3,7 +3,6 @@
 """
 from typing import List, Tuple
 
-from app.models import ValidationResult
 from app.services.number_puzzle_solver import PuzzleSolver
 from app.constraints import RowConstraint, ColumnConstraint, BoxConstraint
 
@@ -23,6 +22,3 @@ class SudokuSolver(PuzzleSolver):
         ]
         super().__init__(board, constraints)
         self.block_rows, self.block_cols = block_shape
-
-    def validate_board(self) -> ValidationResult:
-        return super().validate_board()

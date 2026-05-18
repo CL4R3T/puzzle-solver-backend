@@ -192,10 +192,3 @@ class PuzzleSolver:
             if not result.valid:
                 return result
         return ValidationResult(valid=True, message="棋盘合法")
-
-
-# 向后兼容别名
-def NumberPuzzleSolver(board: List[List[int]]) -> PuzzleSolver:
-    """向后兼容：构造仅行列约束的 PuzzleSolver（拉丁方）。"""
-    n = len(board)
-    return PuzzleSolver(board, [RowConstraint(n), ColumnConstraint(n)])

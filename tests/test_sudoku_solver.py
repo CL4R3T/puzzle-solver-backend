@@ -20,7 +20,7 @@ def test_solve_standard():
     solution = solver.solve()
     assert solution is not None
     # 核心验证行、列、宫都不重复
-    assert SudokuSolver.validate_board(solution).valid
+    assert SudokuSolver(solution).validate_board().valid
     # 一些固定位置被填充
     assert solution[0][2] == 4
     assert solution[8][8] == 9
@@ -40,12 +40,12 @@ def test_solve_custom_block():
     solver = SudokuSolver(board, block_shape=(2, 3))
     sol = solver.solve()
     assert sol is not None
-    assert SudokuSolver.validate_board(sol, block_shape=(2, 3)).valid
+    assert SudokuSolver(sol, block_shape=(2, 3)).validate_board().valid
 
 
 def test_validate_rejects_bad():
     bad = [[1, 1], [0, 0]]
-    res = SudokuSolver.validate_board(bad, block_shape=(1, 2))
+    res = SudokuSolver(bad, block_shape=(1, 2)).validate_board()
     assert not res.valid
 
 

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import app.puzzles  # noqa: F401 — 触发 PuzzleRegistry 注册
-from app.api.routes import sudoku, puzzle
+from app.api.routes import puzzle
 
 app = FastAPI(
     title="谜题求解 API",
@@ -23,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(sudoku.router, prefix="/api")
 app.include_router(puzzle.router, prefix="/api")
 
 
