@@ -1,13 +1,13 @@
 """
-数独求解器：PuzzleSolver 的便捷子类，自动配置行+列+宫格约束
+数独求解器：NumberPuzzleSolver 的便捷子类，自动配置行+列+宫格约束
 """
 from typing import List, Tuple
 
-from app.services.number_puzzle_solver import PuzzleSolver
+from app.services.number_puzzle_solver import NumberPuzzleSolver
 from app.constraints import RowConstraint, ColumnConstraint, BoxConstraint
 
 
-class SudokuSolver(PuzzleSolver):
+class SudokuSolver(NumberPuzzleSolver):
     """数独求解器，支持自定义长方形宫格 (block_rows, block_cols)
 
     要求 block_rows * block_cols == n。
