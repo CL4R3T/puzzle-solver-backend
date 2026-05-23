@@ -1,5 +1,5 @@
 from app.services.sudoku_solver import SudokuSolver
-from app.services.number_puzzle_solver import PuzzleSolver
+from app.services.number_puzzle_solver import NumberPuzzleSolver
 from app.constraints import RowConstraint, ColumnConstraint, BoxConstraint, DiagonalConstraint
 
 
@@ -50,18 +50,18 @@ def test_validate_rejects_bad():
 
 
 def test_solver_inheritance():
-    # 确保 SudokuSolver 继承了 PuzzleSolver
+    # 确保 SudokuSolver 继承了 NumberPuzzleSolver
     solver = SudokuSolver([[0, 0], [0, 0]], block_shape=(1, 2))
     assert solver.solve() == [[1, 2], [2, 1]] or solver.solve() == [[2, 1], [1, 2]]
     assert hasattr(solver, "_mask_to_values")
-    from app.services.number_puzzle_solver import PuzzleSolver as PS
+    from app.services.number_puzzle_solver import NumberPuzzleSolver as PS
     assert isinstance(solver, PS)
 
 
 def test_latin_square():
     """纯行列约束（拉丁方），无宫格"""
     board = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-    solver = PuzzleSolver(board, [RowConstraint(3), ColumnConstraint(3)])
+    solver = NumberPuzzleSolver(board, [RowConstraint(3), ColumnConstraint(3)])
     sol = solver.solve()
     assert sol is not None
     for r in range(3):
@@ -83,7 +83,7 @@ def test_diagonal_sudoku():
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
-    solver = PuzzleSolver(board, [
+    solver = NumberPuzzleSolver(board, [
         RowConstraint(9), ColumnConstraint(9),
         BoxConstraint(9, (3, 3)), DiagonalConstraint(9),
     ])

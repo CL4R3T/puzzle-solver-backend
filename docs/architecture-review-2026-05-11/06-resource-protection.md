@@ -99,7 +99,7 @@ _solver_executor = ThreadPoolExecutor(max_workers=4)
 ```python
 import time
 
-class PuzzleSolver:
+class NumberPuzzleSolver:
     def __init__(self, ...):
         self._start_time = time.perf_counter()
         self._timeout = 30.0

@@ -37,7 +37,7 @@ def _solve_with_cp(self) -> bool:
 给求解器增加一个参数，控制找到的解的数量上限：
 
 ```python
-class PuzzleSolver:
+class NumberPuzzleSolver:
     def solve(self, max_solutions: int = 1) -> SolveResult:
         """
         max_solutions:

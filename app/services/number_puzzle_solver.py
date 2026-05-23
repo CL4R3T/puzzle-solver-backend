@@ -6,7 +6,7 @@ from app.models import ValidationResult
 from app.constraints import Constraint
 
 
-class PuzzleSolver:
+class NumberPuzzleSolver:
     """通用填数谜题求解器。通过组合约束（而非继承）支持任意变体。
 
     使用 n 位的 int 作为每个格子的可能性掩码：最低位表示数字 1，
@@ -160,7 +160,7 @@ class PuzzleSolver:
         for val in list(self._mask_to_values(self.pos[row][col])):
             board_cpy = copy.deepcopy(self.board)
             pos_cpy = copy.deepcopy(self.pos)
-            solver = PuzzleSolver(board_cpy, self.constraints)
+            solver = NumberPuzzleSolver(board_cpy, self.constraints)
             solver.pos = pos_cpy
             if solver._assign(row, col, val):
                 if solver._solve_with_cp():

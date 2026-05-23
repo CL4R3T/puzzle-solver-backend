@@ -46,7 +46,7 @@ class StateChange:
     old_mask: int      # pos 的旧掩码
     old_value: int     # board 的旧值
 
-class PuzzleSolver:
+class NumberPuzzleSolver:
     def __init__(self, board, constraints):
         self.board = board
         self.pos = ...

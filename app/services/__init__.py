@@ -1,4 +1,4 @@
-from .number_puzzle_solver import PuzzleSolver
+from .number_puzzle_solver import NumberPuzzleSolver
 from .sudoku_solver import SudokuSolver
 
-__all__ = ["PuzzleSolver", "SudokuSolver"]
+__all__ = ["NumberPuzzleSolver", "SudokuSolver"]

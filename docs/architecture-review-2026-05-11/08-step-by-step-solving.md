@@ -39,7 +39,7 @@ class SolveStep:
 ### 求解器的记录模式
 
 ```python
-class PuzzleSolver:
+class NumberPuzzleSolver:
     def __init__(self, ..., record_steps: bool = False):
         self._record_steps = record_steps
         self._steps: list[SolveStep] = []
@@ -112,7 +112,7 @@ POST /api/puzzle/{type}/hint
 单步提示的实现：在求解器内部，先运行一轮不产生副作用的传播，找到第一个可以确定的格子，返回步骤信息但不修改棋盘状态。如果传播卡住，返回最早的回退格子和可能的候选值列表：
 
 ```python
-class PuzzleSolver:
+class NumberPuzzleSolver:
     def get_hint(self) -> SolveStep | None:
         """在不修改棋盘的情况下，返回下一步的推理提示"""
         # 运行一轮传播，但不实际赋值

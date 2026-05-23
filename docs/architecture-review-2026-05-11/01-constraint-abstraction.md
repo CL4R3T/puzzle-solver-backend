@@ -59,7 +59,7 @@ class Constraint(Protocol):
 ### 统一的求解器
 
 ```python
-class PuzzleSolver:
+class NumberPuzzleSolver:
     def __init__(self, board: list[list[int]], constraints: list[Constraint]):
         self.board = board
         self.n = len(board)

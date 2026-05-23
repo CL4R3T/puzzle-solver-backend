@@ -72,7 +72,7 @@ async def solve_puzzle(type_id: str, request: SolvePuzzleRequest):
 
 ```python
 # 求解器内部
-class PuzzleSolver:
+class NumberPuzzleSolver:
     def __init__(self, ...):
         self._logger = get_logger().bind(
             board_size=self.n,
