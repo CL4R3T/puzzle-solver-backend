@@ -3,7 +3,7 @@ import copy
 from typing import List, Tuple, Optional
 
 from app.models import ValidationResult
-from app.constraints import Constraint, RowConstraint, ColumnConstraint
+from app.constraints import Constraint
 
 
 class PuzzleSolver:
@@ -61,9 +61,6 @@ class PuzzleSolver:
             yield idx + 1
             m ^= lsb
 
-    def _count_bits(self, mask: int) -> int:
-        return mask.bit_count()
-
     # ---------- 约束传播基础操作 ----------
     def _get_peers(self, row: int, col: int) -> List[Tuple[int, int]]:
         return self._peer_map[(row, col)]
@@ -79,7 +76,7 @@ class PuzzleSolver:
         self.pos[row][col] &= ~bit
         if self.pos[row][col] == 0:
             return False
-        if self._count_bits(self.pos[row][col]) == 1:
+        if self.pos[row][col].bit_count() == 1:
             # 裸单，确定值并传播
             d2 = next(self._mask_to_values(self.pos[row][col]))
             self.board[row][col] = d2
@@ -108,7 +105,7 @@ class PuzzleSolver:
             cells = [(r, c) for r, c in unit if (self.pos[r][c] & (1 << (val - 1))) != 0]
             if len(cells) == 1:
                 r, c = cells[0]
-                if self._count_bits(self.pos[r][c]) > 1:
+                if self.pos[r][c].bit_count() > 1:
                     return (r, c, val)
         return None
 
@@ -120,7 +117,7 @@ class PuzzleSolver:
             # 裸单处理
             for r in range(self.n):
                 for c in range(self.n):
-                    if self.board[r][c] == 0 and self._count_bits(self.pos[r][c]) == 1:
+                    if self.board[r][c] == 0 and self.pos[r][c].bit_count() == 1:
                         val = next(self._mask_to_values(self.pos[r][c]))
                         if not self._assign(r, c, val):
                             return False
@@ -144,7 +141,7 @@ class PuzzleSolver:
         min_size = self.n + 1
         for r in range(self.n):
             for c in range(self.n):
-                s = self._count_bits(self.pos[r][c])
+                s = self.pos[r][c].bit_count()
                 if s > 1 and s < min_size:
                     min_size = s
                     best = (r, c)
