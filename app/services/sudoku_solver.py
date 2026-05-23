@@ -8,17 +8,17 @@ from app.constraints import RowConstraint, ColumnConstraint, BoxConstraint
 
 
 class SudokuSolver(NumberPuzzleSolver):
-    """数独求解器，支持自定义长方形宫格 (block_rows, block_cols)
+    """数独求解器，支持自定义长方形宫格 (box_rows, box_cols)
 
-    要求 block_rows * block_cols == n。
+    要求 box_rows * box_cols == n。
     """
 
-    def __init__(self, board: List[List[int]], block_shape: Tuple[int, int] = (3, 3)):
+    def __init__(self, board: List[List[int]], box_shape: Tuple[int, int] = (3, 3)):
         n = len(board)
         constraints = [
             RowConstraint(n),
             ColumnConstraint(n),
-            BoxConstraint(n, block_shape),
+            BoxConstraint(n, box_shape),
         ]
         super().__init__(board, constraints)
-        self.block_rows, self.block_cols = block_shape
+        self.box_rows, self.box_cols = box_shape

@@ -1,43 +1,33 @@
 from app.models.validation import ValidationResult
+from app.constraints.base import _propagate_units
 
 
 class BoxConstraint:
-    def __init__(self, n: int, block_shape: tuple[int, int]):
-        br, bc = block_shape
+    def __init__(self, n: int, box_shape: tuple[int, int]):
+        br, bc = box_shape
         if br * bc != n:
-            raise ValueError("block_shape 的面积必须等于棋盘边长 n")
+            raise ValueError("box_shape 的面积必须等于棋盘边长 n")
         self.n = n
-        self.block_rows = br
-        self.block_cols = bc
+        self.box_rows = br
+        self.box_cols = bc
 
-    def get_peers(self, row: int, col: int) -> list[tuple[int, int]]:
-        br = self.block_rows
-        bc = self.block_cols
-        box_r = row // br * br
-        box_c = col // bc * bc
-        return [
-            (r, c)
-            for r in range(box_r, box_r + br)
-            for c in range(box_c, box_c + bc)
-            if (r, c) != (row, col)
-        ]
-
-    def get_units(self) -> list[list[tuple[int, int]]]:
-        br = self.block_rows
-        bc = self.block_cols
-        units = []
-        for box_r in range(0, self.n, br):
-            for box_c in range(0, self.n, bc):
+        # 预计算所有宫格 unit
+        units: list[list[tuple[int, int]]] = []
+        for box_r in range(0, n, br):
+            for box_c in range(0, n, bc):
                 units.append([
                     (r, c)
                     for r in range(box_r, box_r + br)
                     for c in range(box_c, box_c + bc)
                 ])
-        return units
+        self._units = units
+
+    def propagate(self, board: list[list[int]], pos: list[list[int]]) -> int:
+        return _propagate_units(self.n, board, pos, self._units)
 
     def validate(self, board: list[list[int]]) -> ValidationResult:
-        br = self.block_rows
-        bc = self.block_cols
+        br = self.box_rows
+        bc = self.box_cols
         for box_r in range(0, self.n, br):
             for box_c in range(0, self.n, bc):
                 seen = set()

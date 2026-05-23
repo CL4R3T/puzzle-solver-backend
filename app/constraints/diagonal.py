@@ -1,24 +1,17 @@
 from app.models.validation import ValidationResult
+from app.constraints.base import _propagate_units
 
 
 class DiagonalConstraint:
     def __init__(self, n: int):
         self.n = n
+        self._units: list[list[tuple[int, int]]] = [
+            [(i, i) for i in range(n)],
+            [(i, n - 1 - i) for i in range(n)],
+        ]
 
-    def get_peers(self, row: int, col: int) -> list[tuple[int, int]]:
-        peers = []
-        # 主对角线: row == col
-        if row == col:
-            peers.extend((i, i) for i in range(self.n) if i != row)
-        # 副对角线: row + col == n - 1
-        if row + col == self.n - 1:
-            peers.extend((i, self.n - 1 - i) for i in range(self.n) if i != row)
-        return peers
-
-    def get_units(self) -> list[list[tuple[int, int]]]:
-        main_diag = [(i, i) for i in range(self.n)]
-        anti_diag = [(i, self.n - 1 - i) for i in range(self.n)]
-        return [main_diag, anti_diag]
+    def propagate(self, board: list[list[int]], pos: list[list[int]]) -> int:
+        return _propagate_units(self.n, board, pos, self._units)
 
     def validate(self, board: list[list[int]]) -> ValidationResult:
         # 主对角线

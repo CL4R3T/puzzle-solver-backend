@@ -1,6 +1,5 @@
-
 import copy
-from typing import List, Tuple, Optional
+from typing import List, Optional
 
 from app.models import ValidationResult
 from app.constraints import Constraint
@@ -11,6 +10,9 @@ class NumberPuzzleSolver:
 
     使用 n 位的 int 作为每个格子的可能性掩码：最低位表示数字 1，
     次位表示数字 2，依此类推。已填的格子其掩码为单一位。
+
+    约束传播采用固定点迭代：交替执行裸单检测和各约束的 propagate 方法，
+    直到没有任何约束能进一步消除候选值。之后进入回溯搜索。
     """
 
     def __init__(self, board: List[List[int]], constraints: List[Constraint]):
@@ -36,21 +38,6 @@ class NumberPuzzleSolver:
                 else:
                     self.pos[r][c] = self.all_mask
 
-        # 预计算 peer map：合并所有约束的 peer（去重）
-        self._peer_map: dict[tuple[int, int], list[tuple[int, int]]] = {}
-        for r in range(self.n):
-            for c in range(self.n):
-                peers = set()
-                for constraint in self.constraints:
-                    for pr, pc in constraint.get_peers(r, c):
-                        peers.add((pr, pc))
-                self._peer_map[(r, c)] = list(peers)
-
-        # 收集所有约束的 unit
-        self._all_units: list[list[tuple[int, int]]] = []
-        for constraint in self.constraints:
-            self._all_units.extend(constraint.get_units())
-
     # ---------- 辅助位运算 ----------
     def _mask_to_values(self, mask: int):
         """按从小到大的顺序生成 mask 中的所有数字值（1-based）。"""
@@ -61,83 +48,40 @@ class NumberPuzzleSolver:
             yield idx + 1
             m ^= lsb
 
-    # ---------- 约束传播基础操作 ----------
-    def _get_peers(self, row: int, col: int) -> List[Tuple[int, int]]:
-        return self._peer_map[(row, col)]
-
-    def _eliminate(self, row: int, col: int, val: int) -> bool:
-        """从 (row,col) 的可能性中移除 val。若变为单一可能则递归传播。
-
-        返回 True 表示成功（无矛盾），False 表示出现矛盾。
-        """
-        bit = 1 << (val - 1)
-        if (self.pos[row][col] & bit) == 0:
-            return True
-        self.pos[row][col] &= ~bit
-        if self.pos[row][col] == 0:
-            return False
-        if self.pos[row][col].bit_count() == 1:
-            # 裸单，确定值并传播
-            d2 = next(self._mask_to_values(self.pos[row][col]))
-            self.board[row][col] = d2
-            for r, c in self._get_peers(row, col):
-                if not self._eliminate(r, c, d2):
-                    return False
-        return True
-
-    def _assign(self, row: int, col: int, val: int) -> bool:
-        """将 val 赋给 (row,col)，并传播约束。"""
-        # 先移除该格其他可能性
-        other_mask = self.pos[row][col] & ~(1 << (val - 1))
-        for d in list(self._mask_to_values(other_mask)):
-            if not self._eliminate(row, col, d):
-                return False
-        self.board[row][col] = val
-        # 然后从 peers 中移除该值
-        for r, c in self._get_peers(row, col):
-            if not self._eliminate(r, c, val):
-                return False
-        return True
-
-    def _find_hidden_single(self, unit: List[Tuple[int, int]]) -> Optional[Tuple[int, int, int]]:
-        """在给定 unit 中查找隐藏的唯一值。返回 (r,c,val) 或 None。"""
-        for val in range(1, self.n + 1):
-            cells = [(r, c) for r, c in unit if (self.pos[r][c] & (1 << (val - 1))) != 0]
-            if len(cells) == 1:
-                r, c = cells[0]
-                if self.pos[r][c].bit_count() > 1:
-                    return (r, c, val)
-        return None
-
+    # ---------- 约束传播 ----------
     def _propagate(self) -> bool:
-        """对所有约束的 unit 执行裸单 + hidden single 循环，与约束类型无关。"""
-        changed = True
-        while changed:
-            changed = False
-            # 裸单处理
+        """固定点迭代：裸单检测 → 各约束 propagate，直到无新发现。"""
+        while True:
+            made_progress = False
+
+            # 裸单检测 & 矛盾检查
             for r in range(self.n):
                 for c in range(self.n):
-                    if self.board[r][c] == 0 and self.pos[r][c].bit_count() == 1:
-                        val = next(self._mask_to_values(self.pos[r][c]))
-                        if not self._assign(r, c, val):
+                    if self.board[r][c] == 0:
+                        bits = self.pos[r][c].bit_count()
+                        if bits == 0:
                             return False
-                        changed = True
+                        if bits == 1:
+                            val = next(self._mask_to_values(self.pos[r][c]))
+                            self.board[r][c] = val
+                            made_progress = True
 
-            # hidden singles：遍历所有约束的所有 unit
-            for unit in self._all_units:
-                # 只考虑 unit 中尚未填充的格子
-                active_unit = [(r, c) for r, c in unit if self.board[r][c] == 0]
-                h = self._find_hidden_single(active_unit)
-                if h:
-                    r, c, val = h
-                    if not self._assign(r, c, val):
-                        return False
-                    changed = True
+            # 各约束消元
+            for constraint in self.constraints:
+                result = constraint.propagate(self.board, self.pos)
+                if result == -1:
+                    return False
+                if result > 0:
+                    made_progress = True
+
+            if not made_progress:
+                break
 
         return True
 
-    def _find_min_cell(self) -> Optional[Tuple[int, int]]:
-        best: Optional[Tuple[int, int]] = None
+    # ---------- 回溯 ----------
+    def _find_min_cell(self) -> Optional[tuple[int, int]]:
+        best: Optional[tuple[int, int]] = None
         min_size = self.n + 1
         for r in range(self.n):
             for c in range(self.n):
@@ -158,26 +102,18 @@ class NumberPuzzleSolver:
 
         row, col = cell
         for val in list(self._mask_to_values(self.pos[row][col])):
-            board_cpy = copy.deepcopy(self.board)
-            pos_cpy = copy.deepcopy(self.pos)
-            solver = NumberPuzzleSolver(board_cpy, self.constraints)
-            solver.pos = pos_cpy
-            if solver._assign(row, col, val):
-                if solver._solve_with_cp():
-                    # 将解写回当前对象
-                    self.board = solver.board
-                    self.pos = solver.pos
-                    return True
+            board_saved = copy.deepcopy(self.board)
+            pos_saved = copy.deepcopy(self.pos)
+            self.board[row][col] = val
+            self.pos[row][col] = 1 << (val - 1)
+            if self._solve_with_cp():
+                return True
+            self.board = board_saved
+            self.pos = pos_saved
         return False
 
     def solve(self) -> Optional[List[List[int]]]:
         """尝试求解，失败返回 None，成功返回解盘（新的二维列表）。"""
-        for r in range(self.n):
-            for c in range(self.n):
-                if self.board[r][c] != 0:
-                    if not self._assign(r, c, self.board[r][c]):
-                        return None
-
         if self._solve_with_cp():
             return self.board
         return None

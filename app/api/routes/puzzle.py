@@ -20,7 +20,10 @@ async def solve_puzzle(type_id: str, request: SolvePuzzleRequest):
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Unknown puzzle type: {type_id}")
 
-    solver = puzzle_type.solver_class(request.board, **request.params)
+    try:
+        solver = puzzle_type.solver_class(request.board, **request.params)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     validation = solver.validate_board()
     if not validation.valid:
@@ -48,7 +51,11 @@ async def validate_puzzle(type_id: str, request: SolvePuzzleRequest):
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Unknown puzzle type: {type_id}")
 
-    solver = puzzle_type.solver_class(request.board, **request.params)
+    try:
+        solver = puzzle_type.solver_class(request.board, **request.params)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     result = solver.validate_board()
     return ValidationResponse(
         valid=result.valid,

@@ -9,9 +9,9 @@ PuzzleRegistry.register(PuzzleType(
     solver_class=SudokuSolver,
     request_model=SolvePuzzleRequest,
     response_model=SolvePuzzleResponse,
-    default_params={"block_shape": (3, 3)},
+    default_params={"box_shape": (3, 3)},
     param_schema={
-        "block_shape": {
+        "box_shape": {
             "type": "array",
             "items": {"type": "integer"},
             "minItems": 2,

@@ -1,15 +1,16 @@
 from app.models.validation import ValidationResult
+from app.constraints.base import _propagate_units
 
 
 class ColumnConstraint:
     def __init__(self, n: int):
         self.n = n
+        self._units: list[list[tuple[int, int]]] = [
+            [(r, c) for r in range(n)] for c in range(n)
+        ]
 
-    def get_peers(self, row: int, col: int) -> list[tuple[int, int]]:
-        return [(r, col) for r in range(self.n) if r != row]
-
-    def get_units(self) -> list[list[tuple[int, int]]]:
-        return [[(r, c) for r in range(self.n)] for c in range(self.n)]
+    def propagate(self, board: list[list[int]], pos: list[list[int]]) -> int:
+        return _propagate_units(self.n, board, pos, self._units)
 
     def validate(self, board: list[list[int]]) -> ValidationResult:
         for c in range(self.n):
