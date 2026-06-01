@@ -10,7 +10,6 @@ def test_list_types():
     types = r.json()["types"]
     type_ids = [t["type_id"] for t in types]
     assert "sudoku" in type_ids
-    assert "killer-sudoku" in type_ids
 
 
 def test_solve_standard_sudoku():
@@ -34,7 +33,7 @@ def test_solve_standard_sudoku():
 
 
 def test_solve_killer_sudoku():
-    r = client.post("/api/puzzle/killer-sudoku/solve", json={
+    r = client.post("/api/puzzle/sudoku/solve", json={
         "board": [
             [1, 0, 0, 4],
             [0, 4, 0, 0],
@@ -52,7 +51,6 @@ def test_solve_killer_sudoku():
     body = r.json()
     assert body["success"] is True
     sol = body["solution"]
-    # 笼子和校验
     assert sol[0][1] + sol[0][2] == 5
 
 
@@ -84,7 +82,7 @@ def test_validate_sudoku_valid():
 
 
 def test_validate_killer_sudoku_valid():
-    r = client.post("/api/puzzle/killer-sudoku/validate", json={
+    r = client.post("/api/puzzle/sudoku/validate", json={
         "board": [
             [1, 2, 3, 4],
             [3, 4, 1, 2],

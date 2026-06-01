@@ -1,6 +1,6 @@
 # 谜题求解后端
 
-基于 FastAPI 的通用谜题求解 API，支持数独、杀手数独等多种谜题类型。
+基于 FastAPI 的通用谜题求解 API，支持数独及其变体（杀手数独、对角线数独等）。
 
 ## 快速开始
 
@@ -39,7 +39,7 @@ uvicorn app.main:app --reload
     {
       "type_id": "sudoku",
       "name": "数独",
-      "description": "标准数独，支持自定义宫格形状",
+      "description": "标准数独，支持自定义宫格形状、杀手笼子、对角线等额外约束",
       "params": {
         "box_shape": {
           "type": "array",
@@ -47,14 +47,12 @@ uvicorn app.main:app --reload
           "minItems": 2, "maxItems": 2,
           "default": [3, 3],
           "description": "宫格的行数和列数"
-        }
-      }
-    },
-    {
-      "type_id": "killer-sudoku",
-      "name": "杀手数独",
-      "description": "标准数独规则 + 虚线框内数字不重复且和等于目标值",
-      "params": {
+        },
+        "diagonals": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否启用对角线约束（主对角线+副对角线数字不重复）"
+        },
         "cages": {
           "type": "array",
           "items": {
@@ -72,14 +70,8 @@ uvicorn app.main:app --reload
             },
             "required": ["cells", "sum"]
           },
-          "description": "笼子列表，每个笼子包含格子和目标总和"
-        },
-        "box_shape": {
-          "type": "array",
-          "items": {"type": "integer"},
-          "minItems": 2, "maxItems": 2,
-          "default": [3, 3],
-          "description": "宫格的行数和列数，默认 3x3"
+          "default": [],
+          "description": "杀手数独笼子列表，每个笼子包含格子和目标总和"
         }
       }
     }
@@ -91,7 +83,7 @@ uvicorn app.main:app --reload
 
 ## POST /api/puzzle/{type_id}/solve
 
-求解指定类型的谜题。`type_id` 在 URL 中指定（如 `sudoku`、`killer-sudoku`）。
+求解指定类型的谜题。`type_id` 在 URL 中指定（如 `sudoku`）。
 
 ### 标准数独
 
@@ -169,12 +161,12 @@ curl -X POST http://127.0.0.1:8000/api/puzzle/sudoku/solve \
 
 ### 杀手数独
 
-杀手数独在标准规则（行、列、宫不重复）基础上，增加了"笼子"约束。每个笼子内数字不重复且求和等于目标值。
+杀手数独在标准规则（行、列、宫不重复）基础上，增加了"笼子"约束。每个笼子内数字不重复且求和等于目标值。通过 `cages` 参数传入。
 
 **4x4 杀手数独示例：**
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/puzzle/killer-sudoku/solve \
+curl -X POST http://127.0.0.1:8000/api/puzzle/sudoku/solve \
   -H "Content-Type: application/json" \
   -d '{
     "board": [
@@ -211,7 +203,7 @@ curl -X POST http://127.0.0.1:8000/api/puzzle/killer-sudoku/solve \
 **9x9 杀手数独示例（多个笼子）：**
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/puzzle/killer-sudoku/solve \
+curl -X POST http://127.0.0.1:8000/api/puzzle/sudoku/solve \
   -H "Content-Type: application/json" \
   -d '{
     "board": [
@@ -239,6 +231,31 @@ curl -X POST http://127.0.0.1:8000/api/puzzle/killer-sudoku/solve \
 ```
 
 > 9x9 默认 `box_shape` 为 `[3, 3]`，可省略。
+
+### 对角线数独
+
+启用 `diagonals` 参数添加两条对角线不重复约束：
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/puzzle/sudoku/solve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "board": [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ],
+    "params": {
+      "diagonals": true
+    }
+  }'
+```
 
 ---
 
@@ -270,7 +287,7 @@ curl -X POST http://127.0.0.1:8000/api/puzzle/sudoku/validate \
 ### 杀手数独校验
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/puzzle/killer-sudoku/validate \
+curl -X POST http://127.0.0.1:8000/api/puzzle/sudoku/validate \
   -H "Content-Type: application/json" \
   -d '{
     "board": [
@@ -294,7 +311,8 @@ curl -X POST http://127.0.0.1:8000/api/puzzle/killer-sudoku/validate \
 
 ```
 请求 → FastAPI 路由 → PuzzleRegistry.get(type_id)
-                    → solver = PuzzleType.solver_class(board, **params)
+                    → 从 params 分离 box_shape 与 extra_constraints
+                    → solver = PuzzleType.solver_class(board, box_shape, extra_constraints)
                     → solver.validate_board()  → 校验
                     → solver.solve()           → 约束传播 + 回溯
                     → SolvePuzzleResponse
@@ -302,35 +320,49 @@ curl -X POST http://127.0.0.1:8000/api/puzzle/killer-sudoku/validate \
 
 - **约束层** (`app/constraints/`) — 每个约束实现自己的 `propagate(board, pos)` 消元逻辑
 - **求解引擎** (`app/services/number_puzzle_solver.py`) — 固定点迭代调度所有约束，配合回溯搜索
+- **求解器** (`app/services/sudoku_solver.py`) — 通过 `register_extra_constraint(key, factory)` 注册额外约束工厂
 - **注册中心** (`app/registry.py`) — 新谜题类型注册后自动出现在 API 和文档中
+
+数独变体不再需要注册为独立谜题类型，只需在 `puzzles/sudoku.py` 中注册约束工厂并声明 `param_schema` 即可。
 
 ## 扩展
 
-在 `app/puzzles/` 下新建注册文件，在 `app/constraints/` 下添加新约束类，在 `app/services/` 下组合求解器即可。无需修改路由或引擎。
+添加新约束类型只需两步，无需修改 `SudokuSolver` 或 API 路由：
 
-示例：添加对角线数独
+**1. 实现约束类** (`app/constraints/thermo.py`)：
 
 ```python
-# app/services/diagonal_sudoku_solver.py
-class DiagonalSudokuSolver(NumberPuzzleSolver):
-    def __init__(self, board, box_shape=(3, 3)):
-        n = len(board)
-        constraints = [
-            RowConstraint(n),
-            ColumnConstraint(n),
-            BoxConstraint(n, box_shape),
-            DiagonalConstraint(n),
-        ]
-        super().__init__(board, constraints)
+class ThermoConstraint:
+    """温度计约束：沿路径数字严格递增"""
+    def __init__(self, n, cells):
+        ...
+    def propagate(self, board, pos):
+        ...
+    def validate(self, board):
+        ...
 ```
 
+**2. 注册工厂 + 声明 schema**（在 `app/puzzles/sudoku.py` 中）：
+
 ```python
-# app/puzzles/diagonal_sudoku.py
-PuzzleRegistry.register(PuzzleType(
-    type_id="diagonal-sudoku",
-    name="对角线数独",
-    description="标准数独 + 两条对角线不重复",
-    solver_class=DiagonalSudokuSolver,
-    ...
-))
+from app.constraints import ThermoConstraint
+
+def _build_thermos(n, thermos):
+    if not thermos:
+        return []
+    return [ThermoConstraint(n, t["cells"]) for t in thermos]
+
+SudokuSolver.register_extra_constraint("thermos", _build_thermos)
+
+# 并在 PuzzleType 的 param_schema 中添加：
+# "thermos": {
+#     "type": "array",
+#     "items": {
+#         "type": "object",
+#         "properties": {
+#             "cells": {"type": "array", ...}
+#         }
+#     },
+#     "description": "温度计约束列表"
+# }
 ```

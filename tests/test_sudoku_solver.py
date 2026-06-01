@@ -189,8 +189,8 @@ def test_killer_cage_contradiction():
 
 
 def test_killer_sudoku_solve():
-    """用 KillerSudokuSolver 求解含笼子约束的 4x4 数独"""
-    from app.services import KillerSudokuSolver
+    """用 SudokuSolver + cages 求解含笼子约束的 4x4 数独"""
+    from app.services import SudokuSolver
 
     board = [
         [1, 0, 0, 4],
@@ -198,24 +198,21 @@ def test_killer_sudoku_solve():
         [2, 0, 0, 0],
         [0, 0, 0, 1],
     ]
-    # 笼子 (0,1)+(0,2)=5 在已知解中即 2+3
     cages = [
         {"cells": [[0, 1], [0, 2]], "sum": 5},
     ]
 
-    solver = KillerSudokuSolver(board, cages, box_shape=(2, 2))
+    solver = SudokuSolver(board, box_shape=(2, 2), extra_constraints={"cages": cages})
     sol = solver.solve()
     assert sol is not None, "应该有解"
-    # 用求解器自身校验
-    assert KillerSudokuSolver(sol, cages, box_shape=(2, 2)).validate_board().valid
+    assert SudokuSolver(sol, box_shape=(2, 2), extra_constraints={"cages": cages}).validate_board().valid
 
-    # 检查笼子和
     assert sol[0][1] + sol[0][2] == 5
 
 
 def test_killer_sudoku_full_cage():
     """全部格子被笼子覆盖且笼子和匹配标准数独解的 4x4 杀手数独"""
-    from app.services import KillerSudokuSolver
+    from app.services import SudokuSolver
 
     board = [
         [0, 0, 0, 0],
@@ -235,10 +232,10 @@ def test_killer_sudoku_full_cage():
         {"cells": [[3, 1], [3, 2]], "sum": 5},   # 3+2
     ]
 
-    solver = KillerSudokuSolver(board, cages, box_shape=(2, 2))
+    solver = SudokuSolver(board, box_shape=(2, 2), extra_constraints={"cages": cages})
     sol = solver.solve()
     assert sol is not None, "应该有解"
-    assert KillerSudokuSolver(sol, cages, box_shape=(2, 2)).validate_board().valid
+    assert SudokuSolver(sol, box_shape=(2, 2), extra_constraints={"cages": cages}).validate_board().valid
     for cage in cages:
         cage_sum = sum(sol[r][c] for r, c in (tuple(c) for c in cage["cells"]))
         assert cage_sum == cage["sum"], f"笼子 {cage} 和不对"
