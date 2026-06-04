@@ -239,3 +239,97 @@ def test_killer_sudoku_full_cage():
     for cage in cages:
         cage_sum = sum(sol[r][c] for r, c in (tuple(c) for c in cage["cells"]))
         assert cage_sum == cage["sum"], f"笼子 {cage} 和不对"
+
+
+# ---------- Thermo ----------
+
+def test_thermo_validation():
+    from app.constraints import ThermoConstraint
+    thermo = ThermoConstraint(4, [(0, 0), (0, 1), (0, 2)])
+
+    # 严格递增
+    assert thermo.validate([[1, 2, 3, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).valid
+
+    # 非严格递增
+    assert not thermo.validate([[1, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).valid
+
+    # 相等
+    assert not thermo.validate([[1, 1, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).valid
+
+    # 递减
+    assert not thermo.validate([[3, 2, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).valid
+
+    # 未填满跳过校验
+    assert thermo.validate([[1, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).valid
+
+    # 非法值
+    assert not thermo.validate([[1, 2, 5, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).valid
+
+
+def test_thermo_propagate_lower_bound():
+    """已填入的值给后面的格子施加下界"""
+    from app.constraints import ThermoConstraint
+    n = 6
+    thermo = ThermoConstraint(n, [(0, 0), (0, 1), (0, 2)])
+    board = [[0] * n for _ in range(n)]
+    board[0][0] = 3
+    pos = [[(1 << n) - 1] * n for _ in range(n)]
+    pos[0][0] = 1 << 2  # val=3
+
+    result = thermo.propagate(board, pos)
+    assert result > 0
+    # 位置1必须 >= 4（3+1），消去 1,2,3
+    assert (pos[0][1] & 0b111) == 0
+    # 位置2必须 >= 5（3+2），消去 1,2,3,4
+    assert (pos[0][2] & 0b1111) == 0
+
+
+def test_thermo_propagate_upper_bound():
+    """后面已填入的值给前面的格子施加下界，前面格子受位置下界约束"""
+    from app.constraints import ThermoConstraint
+    n = 6
+    thermo = ThermoConstraint(n, [(0, 0), (0, 1), (0, 2), (0, 3)])
+    board = [[0, 0, 0, 5, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
+    pos = [[(1 << n) - 1] * n for _ in range(n)]
+    pos[0][3] = 1 << 4  # val=5
+
+    result = thermo.propagate(board, pos)
+    assert result >= 0
+    # 位置2必须 <= 5-1=4
+    assert (pos[0][2] & (1 << 4)) == 0  # 值 5 被消除
+    assert (pos[0][2] & (1 << 5)) == 0  # 值 6 被消除
+
+
+def test_thermo_propagate_contradiction():
+    """已确定值违反递增顺序时应返回 -1"""
+    from app.constraints import ThermoConstraint
+    n = 4
+    thermo = ThermoConstraint(n, [(0, 0), (0, 1)])
+    board = [[3, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+    pos = [[(1 << n) - 1] * n for _ in range(n)]
+    pos[0][0] = 1 << 2
+    pos[0][1] = 1 << 1
+
+    result = thermo.propagate(board, pos)
+    assert result == -1
+
+
+def test_thermo_sudoku_solve():
+    """4x4 数独 + 温度计约束求解"""
+    from app.services import SudokuSolver
+
+    board = [
+        [0, 0, 0, 4],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [1, 0, 0, 0],
+    ]
+    thermos = [
+        [[0, 1], [0, 2]],  # 两格严格递增
+    ]
+
+    solver = SudokuSolver(board, box_shape=(2, 2), extra_constraints={"thermos": thermos})
+    sol = solver.solve()
+    assert sol is not None
+    assert SudokuSolver(sol, box_shape=(2, 2), extra_constraints={"thermos": thermos}).validate_board().valid
+    assert sol[0][1] < sol[0][2]

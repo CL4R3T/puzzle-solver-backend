@@ -1,7 +1,7 @@
 from app.registry import PuzzleRegistry, PuzzleType
 from app.services import SudokuSolver
 from app.models import SolvePuzzleRequest, SolvePuzzleResponse
-from app.constraints import DiagonalConstraint, KillerCageConstraint
+from app.constraints import DiagonalConstraint, KillerCageConstraint, ThermoConstraint
 
 # ---- 额外约束工厂注册 ----
 
@@ -15,6 +15,11 @@ def _build_cages(n: int, cages: list[dict]):
         KillerCageConstraint(n, [tuple(c) for c in cage["cells"]], cage["sum"])
         for cage in cages
     ]
+
+def _build_thermos(n: int, thermos: list[list[list[int]]]):
+    if not thermos:
+        return []
+    return [ThermoConstraint(n, [tuple(c) for c in path]) for path in thermos]
 
 SudokuSolver.register_extra_constraint(
     "diagonals",
@@ -56,6 +61,28 @@ SudokuSolver.register_extra_constraint(
     },
 )
 
+SudokuSolver.register_extra_constraint(
+    "thermos",
+    _build_thermos,
+    name="温度计约束",
+    description="沿折线路径，数字严格单调递增",
+    param_schema={
+        "type": "array",
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {"type": "integer"},
+                "minItems": 2,
+                "maxItems": 2,
+            },
+            "minItems": 2,
+        },
+        "default": [],
+        "description": "温度计列表，每条折线由格子坐标序列表示，路径上的数字严格递增",
+    },
+)
+
 # ---- 谜题类型注册 ----
 
 PuzzleRegistry.register(PuzzleType(
@@ -65,7 +92,7 @@ PuzzleRegistry.register(PuzzleType(
     solver_class=SudokuSolver,
     request_model=SolvePuzzleRequest,
     response_model=SolvePuzzleResponse,
-    default_params={"box_shape": [3, 3], "cages": [], "diagonals": False},
+    default_params={"box_shape": [3, 3], "cages": [], "diagonals": False, "thermos": []},
     param_schema={
         "box_shape": {
             "type": "array",
@@ -100,6 +127,21 @@ PuzzleRegistry.register(PuzzleType(
             },
             "default": [],
             "description": "杀手数独笼子列表，每个笼子包含格子和目标总和",
+        },
+        "thermos": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 2,
+                    "maxItems": 2,
+                },
+                "minItems": 2,
+            },
+            "default": [],
+            "description": "温度计列表，每条折线由格子坐标序列表示，路径上的数字严格递增",
         },
     },
 ))

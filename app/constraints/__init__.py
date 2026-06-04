@@ -4,6 +4,7 @@ from .column import ColumnConstraint
 from .box import BoxConstraint
 from .diagonal import DiagonalConstraint
 from .killer_cage import KillerCageConstraint
+from .thermo import ThermoConstraint
 
 __all__ = [
     "Constraint",
@@ -12,4 +13,5 @@ __all__ = [
     "BoxConstraint",
     "DiagonalConstraint",
     "KillerCageConstraint",
+    "ThermoConstraint",
 ]
