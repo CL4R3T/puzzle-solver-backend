@@ -16,8 +16,45 @@ def _build_cages(n: int, cages: list[dict]):
         for cage in cages
     ]
 
-SudokuSolver.register_extra_constraint("diagonals", _build_diagonals)
-SudokuSolver.register_extra_constraint("cages", _build_cages)
+SudokuSolver.register_extra_constraint(
+    "diagonals",
+    _build_diagonals,
+    name="对角线约束",
+    description="主对角线和副对角线上的数字不重复",
+    param_schema={
+        "type": "boolean",
+        "default": False,
+        "description": "是否启用对角线约束（主对角线+副对角线数字不重复）",
+    },
+)
+
+SudokuSolver.register_extra_constraint(
+    "cages",
+    _build_cages,
+    name="杀手笼子约束",
+    description="笼子内数字之和等于目标值，且笼子内数字不重复",
+    param_schema={
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "cells": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "minItems": 2,
+                        "maxItems": 2,
+                    },
+                },
+                "sum": {"type": "integer"},
+            },
+            "required": ["cells", "sum"],
+        },
+        "default": [],
+        "description": "杀手数独笼子列表，每个笼子包含格子和目标总和",
+    },
+)
 
 # ---- 谜题类型注册 ----
 

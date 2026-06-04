@@ -105,6 +105,27 @@ def test_unknown_puzzle_type_404():
     assert r.status_code == 404
 
 
+def test_get_constraints_info():
+    r = client.get("/api/puzzle/sudoku/constraints")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["type_id"] == "sudoku"
+    assert len(body["builtin_constraints"]) == 3
+    builtin_keys = [c["key"] for c in body["builtin_constraints"]]
+    assert "row" in builtin_keys
+    assert "column" in builtin_keys
+    assert "box" in builtin_keys
+    assert len(body["extra_constraints"]) >= 2
+    extra_keys = [c["key"] for c in body["extra_constraints"]]
+    assert "diagonals" in extra_keys
+    assert "cages" in extra_keys
+
+
+def test_constraints_info_unknown_type_404():
+    r = client.get("/api/puzzle/unknown/constraints")
+    assert r.status_code == 404
+
+
 def test_sudoku_no_solution():
     # 第一行两个 1 矛盾
     r = client.post("/api/puzzle/sudoku/solve", json={

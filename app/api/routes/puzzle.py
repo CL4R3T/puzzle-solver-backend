@@ -46,6 +46,30 @@ async def solve_puzzle(type_id: str, request: SolvePuzzleRequest):
     )
 
 
+@router.get("/{type_id}/constraints")
+async def get_constraints_info(type_id: str):
+    """获取谜题类型可用的所有约束信息，包括内置约束和额外约束"""
+    try:
+        puzzle_type = PuzzleRegistry.get(type_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Unknown puzzle type: {type_id}")
+
+    solver_cls = puzzle_type.solver_class
+    builtin = []
+    extra = []
+
+    if hasattr(solver_cls, "get_builtin_constraints_info"):
+        builtin = solver_cls.get_builtin_constraints_info()
+    if hasattr(solver_cls, "get_extra_constraints_info"):
+        extra = solver_cls.get_extra_constraints_info()
+
+    return {
+        "type_id": type_id,
+        "builtin_constraints": builtin,
+        "extra_constraints": extra,
+    }
+
+
 @router.post("/{type_id}/validate")
 async def validate_puzzle(type_id: str, request: SolvePuzzleRequest):
     try:
