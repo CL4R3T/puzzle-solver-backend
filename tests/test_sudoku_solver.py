@@ -314,6 +314,41 @@ def test_thermo_propagate_contradiction():
     assert result == -1
 
 
+def test_thermo_propagate_candidate_support():
+    """Remove candidates that cannot be part of any increasing sequence."""
+    from app.constraints import ThermoConstraint
+    n = 6
+    thermo = ThermoConstraint(n, [(0, 0), (0, 1), (0, 2)])
+    board = [[0] * n for _ in range(n)]
+    pos = [[(1 << n) - 1] * n for _ in range(n)]
+    pos[0][0] = (1 << 0) | (1 << 4)  # 1, 5
+    pos[0][1] = (1 << 1) | (1 << 5)  # 2, 6
+    pos[0][2] = (1 << 2) | (1 << 3)  # 3, 4
+
+    result = thermo.propagate(board, pos)
+
+    assert result > 0
+    assert pos[0][0] == 1 << 0
+    assert pos[0][1] == 1 << 1
+    assert pos[0][2] == (1 << 2) | (1 << 3)
+
+
+def test_thermo_propagate_candidate_contradiction():
+    """Return contradiction when candidates cannot form an increasing sequence."""
+    from app.constraints import ThermoConstraint
+    n = 6
+    thermo = ThermoConstraint(n, [(0, 0), (0, 1), (0, 2)])
+    board = [[0] * n for _ in range(n)]
+    pos = [[(1 << n) - 1] * n for _ in range(n)]
+    pos[0][0] = 1 << 3  # 4
+    pos[0][1] = 1 << 1  # 2
+    pos[0][2] = 1 << 2  # 3
+
+    result = thermo.propagate(board, pos)
+
+    assert result == -1
+
+
 def test_thermo_sudoku_solve():
     """4x4 数独 + 温度计约束求解"""
     from app.services import SudokuSolver
